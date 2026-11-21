@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Online Book Club Management Platform</title>
+  <style>
+/* style.css - the look of the website */
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Arial, sans-serif; background: #f3f2f7; color: #222; }
+h1, h2 { font-family: Georgia, serif; }
+
+/* header with links to every section */
+header { position: sticky; top: 0; padding: 14px; text-align: center; color: white; background: #5b2a52; }
+header h1 { margin: 0 0 8px; font-size: 24px; }
+header a { display: inline-block; margin: 4px; padding: 6px 12px; color: white; text-decoration: none; border: 1px solid white; border-radius: 6px; }
+header a:hover { background: #7a3d6f; }
+
+/* every section is a white box */
+section { width: 92%; max-width: 900px; margin: 20px auto; padding: 20px; background: white; border: 1px solid #ddd; border-radius: 8px; scroll-margin-top: 130px; }
+section h2 { margin-top: 0; }
+#currentBook { font-weight: bold; color: #5b2a52; }
+
+/* forms and buttons */
+form { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+input, select { flex: 1; min-width: 150px; padding: 8px; font-size: 15px; }
+button { padding: 8px 14px; font-size: 15px; color: white; background: #5b2a52; border: none; border-radius: 6px; cursor: pointer; }
+
+/* items in the lists */
+.item { padding: 10px 0; border-bottom: 1px solid #ddd; }
+.item button { margin: 4px 4px 0 0; }
+.comment { margin: 6px 0 0 16px; padding: 6px 10px; background: #f3f2f7; border-radius: 6px; }
+
+/* participation table */
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+
+  </style>
+</head>
+<body>
+<script src>// script.js - the logic of the Book Club website
+
+// ---------- 1. DATA (simple lists) ----------
+let books = [
+  { title: "The Midnight Library", author: "Matt Haig", votes: 3 },
+  { title: "Atomic Habits", author: "James Clear", votes: 1 }
+];
+let members = [
+  { name: "Aarav", meetings: 0, topics: 0, comments: 0 },
+  { name: "Simran", meetings: 0, topics: 0, comments: 0 }
+];
+let schedule = [];
+let meetings = [];
+let topics = [];
+let currentBook = "";
+
+// ---------- 2. HELPER FUNCTIONS ----------
+
+// the text typed in a form field or chosen in a dropdown
+function get(id) {
+  return document.getElementById(id).value;
+}
+
+// the position (0, 1, 2...) of the item chosen in a dropdown
+function chosen(id) {
+  return document.getElementById(id).selectedIndex;
+}
+
+// makes the choices of a dropdown from a list
+function makeOptions(list, field) {
+  let html = "";
+  for (let i = 0; i < list.length; i++) {
+    html += "<option>" + list[i][field] + "</option>";
+  }
+  return html;
+}
+
+// ---------- 3. ADD NEW ITEMS (one function for each form) ----------
+
+// the last steps of every form: stop the page reloading, clear the form, show the new list
+function finish(event) {
+  event.preventDefault();   // stops the page from reloading
+  event.target.reset();     // clears the form
+  showAll();                // shows the new list
+}
+
+function addBook(event) {
+  books.push({ title: get("bookTitle"), author: get("bookAuthor"), votes: 0 });
+  finish(event);
+}
+
+function addMember(event) {
+  members.push({ name: get("memberName"), meetings: 0, topics: 0, comments: 0 });
+  finish(event);
+}
+
+function addSchedule(event) {
+  schedule.push({ book: get("scheduleBook"), task: get("scheduleTask"), date: get("scheduleDate") });
+  finish(event);
+}
+
+function addMeeting(event) {
+  meetings.push({ title: get("meetingTitle"), date: get("meetingDate"), time: get("meetingTime"), place: get("meetingPlace"), attendees: [] });
+  finish(event);
+}
+
+function addAttendance(event) {
+  meetings[chosen("attendMeeting")].attendees.push(get("attendMember"));
+  members[chosen("attendMember")].meetings++;     // +1 meeting for this member
+  finish(event);
+}
+
+function addTopic(event) {
+  topics.push({ book: get("topicBook"), title: get("topicTitle"), startedBy: get("topicBy"), comments: [] });
+  members[chosen("topicBy")].topics++;            // +1 topic for this member
+  finish(event);
+}
+
+function addComment(event) {
+  topics[chosen("commentTopic")].comments.push(get("commentBy") + ": " + get("commentText"));
+  members[chosen("commentBy")].comments++;        // +1 comment for this member
+  finish(event);
+}
+
+// ---------- 4. BOOK BUTTONS ----------
+
+function vote(i) {
+  books[i].votes++;
+  showAll();
+}
+
+function selectBook(i) {
+  currentBook = books[i].title;
+  showAll();
+}
+
+// ---------- 5. SHOW THE LISTS ON THE PAGE ----------
+
+function showBooks() {
+  let html = "";
+  for (let i = 0; i < books.length; i++) {
+    html += `<div class="item">
+      <strong>${books[i].title}</strong> by ${books[i].author} (Votes: ${books[i].votes})<br>
+      <button onclick="vote(${i})">Vote</button>
+      <button onclick="selectBook(${i})">Select as current book</button>
+    </div>`;
+  }
+  document.getElementById("bookList").innerHTML = html;
+  document.getElementById("currentBook").innerHTML = "Now reading: " + (currentBook || "no book selected yet");
+  document.getElementById("scheduleBook").innerHTML = makeOptions(books, "title");
+  document.getElementById("topicBook").innerHTML = makeOptions(books, "title");
+}
+
+function showMembers() {
+  let html = "";
+  for (let i = 0; i < members.length; i++) {
+    html += `<div class="item">${members[i].name}</div>`;
+  }
+  document.getElementById("memberList").innerHTML = html;
+  document.getElementById("topicBy").innerHTML = makeOptions(members, "name");
+  document.getElementById("commentBy").innerHTML = makeOptions(members, "name");
+  document.getElementById("attendMember").innerHTML = makeOptions(members, "name");
+}
+
+function showSchedule() {
+  let html = "";
+  for (let i = 0; i < schedule.length; i++) {
+    html += `<div class="item"><strong>${schedule[i].book}</strong>: ${schedule[i].task} (finish by ${schedule[i].date})</div>`;
+  }
+  document.getElementById("scheduleList").innerHTML = html;
+}
+
+function showMeetings() {
+  let html = "";
+  for (let i = 0; i < meetings.length; i++) {
+    html += `<div class="item">
+      <strong>${meetings[i].title}</strong><br>
+      ${meetings[i].date} at ${meetings[i].time}, ${meetings[i].place}<br>
+      Attended by: ${meetings[i].attendees.join(", ")}
+    </div>`;
+  }
+  document.getElementById("meetingList").innerHTML = html;
+  document.getElementById("attendMeeting").innerHTML = makeOptions(meetings, "title");
+}
+
+function showTopics() {
+  let html = "";
+  for (let i = 0; i < topics.length; i++) {
+    html += `<div class="item"><strong>${topics[i].title}</strong> (${topics[i].book}, started by ${topics[i].startedBy})`;
+    for (let j = 0; j < topics[i].comments.length; j++) {
+      html += `<p class="comment">${topics[i].comments[j]}</p>`;
+    }
+    html += "</div>";
+  }
+  document.getElementById("topicList").innerHTML = html;
+  document.getElementById("commentTopic").innerHTML = makeOptions(topics, "title");
+}
+
+function showParticipation() {
+  let html = "";
+  for (let i = 0; i < members.length; i++) {
+    const m = members[i];
+    html += `<tr><td>${m.name}</td><td>${m.meetings}</td><td>${m.topics}</td><td>${m.comments}</td><td>${m.meetings + m.topics + m.comments}</td></tr>`;
+  }
+  document.getElementById("participationTable").innerHTML = html;
+}
+
+// shows everything on the page again (called after every change)
+function showAll() {
+  showBooks();
+  showMembers();
+  showSchedule();
+  showMeetings();
+  showTopics();
+  showParticipation();
+}
+
+showAll();   // start the website
+</script>
+  <header>
+    <h1>Online Book Club Management Platform</h1>
+    <a href="#books">Books</a>
+    <a href="#members">Members</a>
+    <a href="#schedule">Reading Schedule</a>
+    <a href="#meetings">Meetings</a>
+    <a href="#discussions">Discussions</a>
+    <a href="#participation">Participation</a>
+  </header>
+
+  <!-- 1. Book selection -->
+  <section id="books"
+  
+
+  
+  >
+    <h2>Book Selection</h2>
+    <p id="currentBook"></p>
+    <form onsubmit="addBook(event)">
+      <input id="bookTitle" placeholder="Book title" required>
+      <input id="bookAuthor" placeholder="Author" required>
+      <button>Add Book</button>
+    </form>
+    <div id="bookList"></div>
+  </section>
+
+  <!-- 2. Members -->
+  <section id="members">
+    <h2>Members</h2>
+    <form onsubmit="addMember(event)">
+      <input id="memberName" placeholder="Member name" required>
+      <button>Add Member</button>
+    </form>
+    <div id="memberList"></div>
+  </section>
+
+  <!-- 3. Reading schedule -->
+  <section id="schedule">
+    <h2>Reading Schedule</h2>
+    <form onsubmit="addSchedule(event)">
+      <select id="scheduleBook" required></select>
+      <input id="scheduleTask" placeholder="What to read (e.g. Chapters 1 to 5)" required>
+      <input id="scheduleDate" type="date" required>
+      <button>Add to Schedule</button>
+    </form>
+    <div id="scheduleList"></div>
+  </section>
+
+  <!-- 4. Meetings -->
+  <section id="meetings">
+    <h2>Meetings</h2>
+    <form onsubmit="addMeeting(event)">
+      <input id="meetingTitle" placeholder="Meeting title" required>
+      <input id="meetingDate" type="date" required>
+      <input id="meetingTime" type="time" required>
+      <input id="meetingPlace" placeholder="Place or online link" required>
+      <button>Add Meeting</button>
+    </form>
+    <div id="meetingList"></div>
+
+    <h3>Mark who attended</h3>
+    <form onsubmit="addAttendance(event)">
+      <select id="attendMeeting" required></select>
+      <select id="attendMember" required></select>
+      <button>Mark Attended</button>
+    </form>
+  </section>
+
+  <!-- 5. Discussion topics and comments -->
+  <section id="discussions">
+    <h2>Discussion Topics</h2>
+    <form onsubmit="addTopic(event)">
+      <select id="topicBook" required></select>
+      <input id="topicTitle" placeholder="Discussion topic or question" required>
+      <select id="topicBy" required></select>
+      <button>Start Topic</button>
+    </form>
+    <div id="topicList"></div>
+
+    <h3>Add a comment</h3>
+    <form onsubmit="addComment(event)">
+      <select id="commentTopic" required></select>
+      <select id="commentBy" required></select>
+      <input id="commentText" placeholder="Write a comment" required>
+      <button>Post Comment</button>
+    </form>
+  </section>
+
+  <!-- 6. Participation -->
+  <section id="participation">
+    <h2>Participation</h2>
+    <p>Each meeting attended, topic started and comment posted gives 1 point.</p>
+    <table>
+      <tr><th>Member</th><th>Meetings attended</th><th>Topics started</th><th>Comments</th><th>Total points</th></tr>
+      <tbody id="participationTable"></tbody>
+    </table>
+  </section>
+
+</body>
+</html>
